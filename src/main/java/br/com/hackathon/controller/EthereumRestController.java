@@ -118,7 +118,7 @@ public class EthereumRestController {
     }
 
     @RequestMapping(value = API_SEND_TRANSACTION, method = RequestMethod.GET)
-    public CompletableFuture<ResponseTransfer> sendTransaction() {
+    public CompletableFuture<ResponseTransfer> sendEthereumTransaction() {
         ResponseTransfer responseTransfer = new ResponseTransfer();
         Instant start = TimeHelper.start();
         return CompletableFuture.supplyAsync(() -> {
@@ -136,7 +136,7 @@ public class EthereumRestController {
     }
 
     @RequestMapping(value = API_DEPLOY_CONTRACT, method = RequestMethod.GET)
-    public CompletableFuture<ResponseTransfer> deploy() {
+    public CompletableFuture<ResponseTransfer> deployContract() {
         ResponseTransfer responseTransfer = new ResponseTransfer();
         Instant start = TimeHelper.start();
         return CompletableFuture.supplyAsync(() -> {
