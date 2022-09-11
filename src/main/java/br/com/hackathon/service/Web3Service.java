@@ -3,38 +3,35 @@ package br.com.hackathon.service;
 import br.com.hackathon.contract.Example;
 import br.com.hackathon.contract.Greeting;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.web3j.abi.FunctionEncoder;
 import org.web3j.abi.datatypes.Function;
-import org.web3j.crypto.CipherException;
 import org.web3j.crypto.Credentials;
-import org.web3j.crypto.WalletUtils;
+import org.web3j.crypto.RawTransaction;
+import org.web3j.crypto.TransactionEncoder;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameter;
+import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.methods.request.Transaction;
 import org.web3j.protocol.core.methods.response.*;
 import org.web3j.protocol.http.HttpService;
 import org.web3j.tx.Contract;
 import org.web3j.tx.ManagedTransaction;
+import org.web3j.utils.Convert;
+import org.web3j.utils.Numeric;
 
-import java.io.File;
-import java.io.IOException;
 import java.math.BigInteger;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.Collections;
+import java.util.Optional;
 
-import static br.com.hackathon.constant.Constants.*;
+import static br.com.hackathon.constant.Constants.GENERIC_EXCEPTION;
+import static br.com.hackathon.constant.Constants.PLEASE_SUPPLY_REAL_DATA;
 
 @Slf4j
 @Service
 public class Web3Service {
-
-    private Web3j web3j = Web3j.build(new HttpService("https://quick-bitter-river.discover.quiknode.pro/ef178538a06fb20ed08c9f04b77cc874e52fcf0d/"));
+    String PRIVATE_KEY = "298393836b1479b9c76362ed8f346848f70ec9d24fdb67f62f9bfc07cf9c599c";
+    private Web3j web3j = Web3j.build(new HttpService("HTTP://127.0.0.1:7545"));
 
     //Create and Init the default Web3J connection
     public void customInit(String provider) {
@@ -65,7 +62,7 @@ public class Web3Service {
         EthAccounts result = new EthAccounts();
         try {
             result = this.web3j.ethAccounts().sendAsync().get();
-            log.info("Etherium Accounts {}", result);
+            log.info("Ethereum Accounts {}", result);
         } catch (Exception ex) {
             log.error(GENERIC_EXCEPTION, ex);
         }
@@ -75,7 +72,7 @@ public class Web3Service {
     public EthGetTransactionCount getTransactionCount() {
         EthGetTransactionCount result = new EthGetTransactionCount();
         try {
-            result = this.web3j.ethGetTransactionCount(DEFAULT_ADDRESS, DefaultBlockParameter.valueOf("latest")).sendAsync().get();
+            result = this.web3j.ethGetTransactionCount(getCredentials(PRIVATE_KEY).getAddress(), DefaultBlockParameter.valueOf("latest")).sendAsync().get();
             log.info("Transaction Count {}", result);
         } catch (Exception ex) {
             log.error(GENERIC_EXCEPTION, ex);
@@ -86,8 +83,8 @@ public class Web3Service {
     public EthGetBalance getEthBalance() {
         EthGetBalance result = new EthGetBalance();
         try {
-            result = this.web3j.ethGetBalance(DEFAULT_ADDRESS, DefaultBlockParameter.valueOf("latest")).sendAsync().get();
-            log.info("Ethereium Balance {}", result);
+            result = this.web3j.ethGetBalance(getCredentials(PRIVATE_KEY).getAddress(), DefaultBlockParameter.valueOf("latest")).sendAsync().get();
+            log.info("Ethereum Balance {}", result);
         } catch (Exception ex) {
             log.error(GENERIC_EXCEPTION, ex);
         }
@@ -99,20 +96,20 @@ public class Web3Service {
         String contractAddress = "";
 
         try {
-            Credentials credentials = getCredentials();
+            Credentials credentials = getCredentials(PRIVATE_KEY);
             contractAddress = credentials.getAddress();
 
             //Deploy contract to address specified by wallet
-            CompletableFuture<Greeting> contractGreeting = Greeting.deploy(this.web3j,
+            Greeting contractGreeting = Greeting.deploy(this.web3j,
                     credentials,
                     ManagedTransaction.GAS_PRICE,
-                    Contract.GAS_LIMIT, "").sendAsync();
+                    Contract.GAS_LIMIT, "").send();
             log.info("Greeting {}", contractGreeting);
 
-            CompletableFuture<Example> contractExample = Example.deploy(this.web3j,
+            Example contractExample = Example.deploy(this.web3j,
                     credentials,
                     ManagedTransaction.GAS_PRICE,
-                    Contract.GAS_LIMIT).sendAsync();
+                    Contract.GAS_LIMIT).send();
             log.info("Example {}", contractExample);
         } catch (Exception ex) {
             log.error(PLEASE_SUPPLY_REAL_DATA, ex);
@@ -121,25 +118,28 @@ public class Web3Service {
         return contractAddress;
     }
 
-    @Async
-    public String sendTransaction() {
-        String transactionHash = "";
+    public String sendEthereumTransaction() {
+        String transactionHash;
 
         try {
-            List inputParams = new ArrayList();
-            List outputParams = new ArrayList();
-            Function function = new Function("fuctionName", inputParams, outputParams);
+            Function function = new Function("functionName", Collections.emptyList(), Collections.emptyList());
+            Credentials credentials = getCredentials(PRIVATE_KEY);
 
-            String encodedFunction = FunctionEncoder.encode(function);
+            // Get the latest nonce of current account
+            EthGetTransactionCount ethGetTransactionCount = web3j
+                    .ethGetTransactionCount(credentials.getAddress(), DefaultBlockParameterName.LATEST).send();
+            BigInteger nonce = ethGetTransactionCount.getTransactionCount();
 
-            Credentials credentials = getCredentials();
+            log.info("Amount to be sent: 12");
+            BigInteger value = Convert.toWei("12", Convert.Unit.ETHER).toBigInteger();
 
-            BigInteger nonce = BigInteger.valueOf(100);
-            BigInteger gasprice = BigInteger.valueOf(100);
-            BigInteger gaslimit = BigInteger.valueOf(100);
-            log.info("Before Transaction");
-            Transaction transaction = Transaction.createFunctionCallTransaction(credentials.getAddress(), nonce, gasprice, gaslimit, getContractAddress(), encodedFunction);
-            log.info("After Transaction");
+            // Gas Parameter
+            final var gasLimit = web3j.ethGetBlockByNumber(DefaultBlockParameter.valueOf("latest"), true).send().getBlock().getGasLimit();
+            final var gasPrice = web3j.ethGasPrice().send().getGasPrice();
+            log.info("EthGasPrice {}", gasPrice);
+
+            Transaction transaction = Transaction.createFunctionCallTransaction(credentials.getAddress(), nonce, gasPrice, gasLimit, getContractAddress(), value, FunctionEncoder.encode(function));
+
             EthSendTransaction transactionResponse = web3j.ethSendTransaction(transaction).sendAsync().get();
             if (transactionResponse.getResult() == null) {
                 log.info("Transaction {}", transactionResponse.getError().getMessage());
@@ -147,6 +147,9 @@ public class Web3Service {
             }
             transactionHash = transactionResponse.getTransactionHash();
             log.info("Transaction {}", transactionHash);
+
+            // Wait for transaction to be mined
+            mined(transactionHash, credentials);
         } catch (Exception ex) {
             log.error(PLEASE_SUPPLY_REAL_DATA, ex);
             return PLEASE_SUPPLY_REAL_DATA;
@@ -155,19 +158,86 @@ public class Web3Service {
         return transactionHash;
     }
 
-    private Credentials getCredentials() {
+    private Credentials getCredentials(String privateKey) {
         try {
-            final var walletPassword = "trumpshouldbeimpeached";
-            final var walletDirectory = "C:\\Users\\allan\\OneDrive\\Documentos\\hackathon";
-            //Create a wallet
-            final var walletName = WalletUtils.generateNewWalletFile(walletPassword, new File(walletDirectory), true);
-            log.info("Wallet name: " + walletName);
-            //Load the credentials from it
-            return WalletUtils.loadCredentials(walletPassword, walletDirectory + "/" + walletName);
-        } catch (CipherException | IOException | InvalidAlgorithmParameterException | NoSuchAlgorithmException |
-                 NoSuchProviderException ex) {
+            return Credentials.create(privateKey);
+        } catch (Exception ex) {
             log.error(PLEASE_SUPPLY_REAL_DATA, ex);
             throw new RuntimeException(ex);
+        }
+    }
+
+    public void testTutorial() {
+        log.info("Connecting to Ethereum ...");
+        Web3j web3 = Web3j.build(new HttpService("HTTP://127.0.0.1:7545"));
+        log.info("Successfuly connected to Ethereum");
+
+        try {
+            String privetKey = "298393836b1479b9c76362ed8f346848f70ec9d24fdb67f62f9bfc07cf9c599c"; // Add a private key here
+            // Decrypt private key into Credential object
+            Credentials credentials = Credentials.create(privetKey);
+            log.info("Account address: " + credentials.getAddress());
+            log.info("Balance: "
+                    + Convert.fromWei(web3.ethGetBalance(credentials.getAddress(), DefaultBlockParameterName.LATEST)
+                    .send().getBalance().toString(), Convert.Unit.ETHER));
+
+            // Get the latest nonce of current account
+            EthGetTransactionCount ethGetTransactionCount = web3
+                    .ethGetTransactionCount(credentials.getAddress(), DefaultBlockParameterName.LATEST).send();
+            BigInteger nonce = ethGetTransactionCount.getTransactionCount();
+
+            // Recipient address
+            String recipientAddress = credentials.getAddress();
+            // Value to transfer (in wei)
+            log.info("Enter Amount to be sent: 10");
+            BigInteger value = Convert.toWei("10", Convert.Unit.ETHER).toBigInteger();
+
+            // Gas Parameter
+            BigInteger gasLimit = BigInteger.valueOf(21000);
+            //eth_gasPrice, returns the current price per gas in wei.
+            EthGasPrice gasPrice = web3j.ethGasPrice().send();
+            //BigInteger gasPrice = Convert.toWei("1", Convert.Unit.GWEI).toBigInteger();
+
+            // Prepare the rawTransaction
+            RawTransaction rawTransaction = RawTransaction.createEtherTransaction(nonce, gasPrice.getGasPrice(), gasLimit,
+                    recipientAddress, value);
+
+            // Sign the transaction
+            byte[] signedMessage = TransactionEncoder.signMessage(rawTransaction, credentials);
+            String hexValue = Numeric.toHexString(signedMessage);
+
+            // Send transaction
+            EthSendTransaction ethSendTransaction = web3.ethSendRawTransaction(hexValue).send();
+            String transactionHash = ethSendTransaction.getTransactionHash();
+            log.info("transactionHash: " + transactionHash);
+
+            // Wait for transaction to be mined
+            mined(transactionHash, credentials);
+
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private void mined(String transactionHash, Credentials credentials) {
+        try {
+            // Wait for transaction to be mined
+            Optional<TransactionReceipt> transactionReceipt;
+            do {
+                log.info("checking if transaction " + transactionHash + " is mined....");
+                EthGetTransactionReceipt ethGetTransactionReceiptResp = web3j.ethGetTransactionReceipt(transactionHash)
+                        .send();
+                transactionReceipt = ethGetTransactionReceiptResp.getTransactionReceipt();
+                Thread.sleep(3000); // Wait for 3 sec
+            } while (!transactionReceipt.isPresent());
+
+            log.info("Transaction " + transactionHash + " was mined in block # "
+                    + transactionReceipt.get().getBlockNumber());
+            log.info("Balance: "
+                    + Convert.fromWei(web3j.ethGetBalance(credentials.getAddress(), DefaultBlockParameterName.LATEST)
+                    .send().getBalance().toString(), Convert.Unit.ETHER));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 }

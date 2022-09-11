@@ -17,7 +17,8 @@ import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
-import static br.com.hackathon.constant.Constants.*;
+import static br.com.hackathon.constant.Constants.API_SEND_TRANSACTION;
+import static br.com.hackathon.constant.Constants.GENERIC_EXCEPTION;
 
 @RestController
 public class EthereumRestController {
@@ -119,12 +120,12 @@ public class EthereumRestController {
     }
 
     @RequestMapping(value = API_SEND_TRANSACTION, method = RequestMethod.GET)
-    public Future<ResponseTransfer> sendTransaction() {
+    public CompletableFuture<ResponseTransfer> sendTransaction() {
         ResponseTransfer responseTransfer = new ResponseTransfer();
         Instant start = TimeHelper.start();
         return CompletableFuture.supplyAsync(() -> {
             try {
-                var result = web3Service.sendTransaction();
+                var result = web3Service.sendEthereumTransaction();
                 responseTransfer.setMessage(result);
             } catch (Exception e) {
                 responseTransfer.setMessage(GENERIC_EXCEPTION);

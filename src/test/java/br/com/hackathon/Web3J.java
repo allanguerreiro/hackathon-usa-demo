@@ -53,9 +53,7 @@ public class Web3J {
         String accountAddress = credentials.getAddress();
         log.info("Account address: " + accountAddress);
 
-
         SimpleBank simpleBank = SimpleBank.load(accountAddress, web3, credentials, new DefaultGasProvider());
-
 
         simpleBank.logDepositMadeEventFlowable(DefaultBlockParameterName.EARLIEST, DefaultBlockParameterName.LATEST)
                 .doOnError(error -> log.error("The error message is: {}", error.getMessage()))
