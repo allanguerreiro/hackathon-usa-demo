@@ -1,7 +1,6 @@
 package br.com.hackathon.service;
 
-import br.com.hackathon.contract.Example;
-import br.com.hackathon.contract.Greeting;
+import br.com.hackathon.contract.Developer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.web3j.abi.FunctionEncoder;
@@ -100,17 +99,11 @@ public class Web3Service {
             contractAddress = credentials.getAddress();
 
             //Deploy contract to address specified by wallet
-            Greeting contractGreeting = Greeting.deploy(this.web3j,
-                    credentials,
-                    ManagedTransaction.GAS_PRICE,
-                    Contract.GAS_LIMIT, "").send();
-            log.info("Greeting {}", contractGreeting);
-
-            Example contractExample = Example.deploy(this.web3j,
+            Developer developer = Developer.deploy(this.web3j,
                     credentials,
                     ManagedTransaction.GAS_PRICE,
                     Contract.GAS_LIMIT).send();
-            log.info("Example {}", contractExample);
+            log.info("Developer {}", developer);
         } catch (Exception ex) {
             log.error(PLEASE_SUPPLY_REAL_DATA, ex);
             return contractAddress;
