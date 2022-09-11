@@ -1,6 +1,7 @@
 package br.com.hackathon.service;
 
 import br.com.hackathon.contract.Developer;
+import br.com.hackathon.contract.ManageDev;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.web3j.abi.FunctionEncoder;
@@ -91,19 +92,10 @@ public class Web3Service {
     }
 
     public String getContractAddress() {
-
         String contractAddress = "";
-
         try {
             Credentials credentials = getCredentials(PRIVATE_KEY);
             contractAddress = credentials.getAddress();
-
-            //Deploy contract to address specified by wallet
-            Developer developer = Developer.deploy(this.web3j,
-                    credentials,
-                    ManagedTransaction.GAS_PRICE,
-                    Contract.GAS_LIMIT).send();
-            log.info("Developer {}", developer);
         } catch (Exception ex) {
             log.error(PLEASE_SUPPLY_REAL_DATA, ex);
             return contractAddress;
@@ -111,7 +103,7 @@ public class Web3Service {
         return contractAddress;
     }
 
-    public String deployContract() {
+    public String deployContractDeveloper() {
         Developer developer;
         try {
             //Deploy contract to address specified by wallet
@@ -120,11 +112,26 @@ public class Web3Service {
                     ManagedTransaction.GAS_PRICE,
                     Contract.GAS_LIMIT).send();
             log.info("Developer {}", developer);
+            return developer.getContractAddress();
         } catch (Exception ex) {
             log.error(PLEASE_SUPPLY_REAL_DATA, ex);
             return PLEASE_SUPPLY_REAL_DATA;
         }
-        return developer.getContractAddress();
+    }
+
+    public String deployContractManageDev() {
+        ManageDev manageDev;
+        try {
+            manageDev = ManageDev.deploy(this.web3j,
+                    getCredentials(PRIVATE_KEY),
+                    ManagedTransaction.GAS_PRICE,
+                    Contract.GAS_LIMIT).send();
+            log.info("ManageDev {}", manageDev);
+            return manageDev.getContractAddress();
+        } catch (Exception ex) {
+            log.error(PLEASE_SUPPLY_REAL_DATA, ex);
+            return PLEASE_SUPPLY_REAL_DATA;
+        }
     }
 
     public String sendEthereumTransaction() {

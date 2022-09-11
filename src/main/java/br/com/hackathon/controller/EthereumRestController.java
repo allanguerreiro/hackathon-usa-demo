@@ -135,13 +135,31 @@ public class EthereumRestController {
         });
     }
 
-    @RequestMapping(value = API_DEPLOY_CONTRACT, method = RequestMethod.GET)
-    public CompletableFuture<ResponseTransfer> deployContract() {
+    @RequestMapping(value = API_DEPLOY_CONTRACT_DEVELOPER, method = RequestMethod.GET)
+    public CompletableFuture<ResponseTransfer> deployContractDeveloper() {
         ResponseTransfer responseTransfer = new ResponseTransfer();
         Instant start = TimeHelper.start();
         return CompletableFuture.supplyAsync(() -> {
             try {
-                var result = web3Service.deployContract();
+                var result = web3Service.deployContractDeveloper();
+                responseTransfer.setMessage(result);
+            } catch (Exception e) {
+                responseTransfer.setMessage(GENERIC_EXCEPTION);
+            }
+            return responseTransfer;
+        }).thenApplyAsync(result -> {
+            result.setPerformance(TimeHelper.stop(start));
+            return result;
+        });
+    }
+
+    @RequestMapping(value = API_DEPLOY_CONTRACT_MANAGER, method = RequestMethod.GET)
+    public CompletableFuture<ResponseTransfer> deployContractManageDev() {
+        ResponseTransfer responseTransfer = new ResponseTransfer();
+        Instant start = TimeHelper.start();
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var result = web3Service.deployContractManageDev();
                 responseTransfer.setMessage(result);
             } catch (Exception e) {
                 responseTransfer.setMessage(GENERIC_EXCEPTION);
