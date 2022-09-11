@@ -1,29 +1,17 @@
 package br.com.hackathon.transfer;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.Duration;
 
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@Data
 public class ResponseTransfer {
-
-    public ResponseTransfer() {
-    }
-
     private Duration performance;
     private String message;
-
-    public Duration getPerformance() {
-        return performance;
-    }
-
-    public void setPerformance(Duration performance) {
-        this.performance = performance;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
 }
