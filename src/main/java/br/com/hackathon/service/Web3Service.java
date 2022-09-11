@@ -17,12 +17,15 @@ import org.web3j.protocol.core.methods.response.*;
 import org.web3j.protocol.http.HttpService;
 import org.web3j.tx.Contract;
 import org.web3j.tx.ManagedTransaction;
+import org.web3j.tx.Transfer;
 import org.web3j.utils.Convert;
 import org.web3j.utils.Numeric;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.concurrent.Future;
 
 import static br.com.hackathon.constant.Constants.GENERIC_EXCEPTION;
 import static br.com.hackathon.constant.Constants.PLEASE_SUPPLY_REAL_DATA;
@@ -255,5 +258,18 @@ public class Web3Service {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public TransactionReceipt performTransfer() {
+        log.info("Commencing transfer (this may take a few minutes) ");
+        try {
+            TransactionReceipt transactionReceipt = Transfer.sendFunds(
+                    web3j, getCredentials(PRIVATE_KEY), "0x8c53F940D7C997e7Fc0B2D9Ae68e0B04AC6De81b",
+                    BigDecimal.valueOf(1.0), Convert.Unit.ETHER).send();
+            return transactionReceipt;
+        } catch (Exception e) {
+            log.error("Problem encountered transferring funds: {}" + e.getMessage(), e);
+        }
+        throw new RuntimeException("Application exit failure");
     }
 }

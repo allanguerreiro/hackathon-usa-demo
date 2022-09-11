@@ -170,4 +170,22 @@ public class EthereumRestController {
             return result;
         });
     }
+
+    @RequestMapping(value = API_PERFORM_TRANSFER, method = RequestMethod.GET)
+    public CompletableFuture<ResponseTransfer> performTransfer() {
+        ResponseTransfer responseTransfer = new ResponseTransfer();
+        Instant start = TimeHelper.start();
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var response = web3Service.performTransfer();
+                responseTransfer.setMessage(response.getStatus());
+            } catch (Exception e) {
+                responseTransfer.setMessage(GENERIC_EXCEPTION);
+            }
+            return responseTransfer;
+        }).thenApplyAsync(result -> {
+            result.setPerformance(TimeHelper.stop(start));
+            return result;
+        });
+    }
 }
