@@ -1,14 +1,13 @@
 package br.com.hackathon.service;
 
-import br.com.hackathon.contract.Developer;
+import br.com.hackathon.contract.ContractDev;
 import br.com.hackathon.contract.ManageDev;
+import br.com.hackathon.transfer.AccountDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.web3j.abi.FunctionEncoder;
 import org.web3j.abi.datatypes.Function;
 import org.web3j.crypto.Credentials;
-import org.web3j.crypto.RawTransaction;
-import org.web3j.crypto.TransactionEncoder;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameter;
 import org.web3j.protocol.core.DefaultBlockParameterName;
@@ -19,13 +18,14 @@ import org.web3j.tx.Contract;
 import org.web3j.tx.ManagedTransaction;
 import org.web3j.tx.Transfer;
 import org.web3j.utils.Convert;
-import org.web3j.utils.Numeric;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 import static br.com.hackathon.constant.Constants.GENERIC_EXCEPTION;
 import static br.com.hackathon.constant.Constants.PLEASE_SUPPLY_REAL_DATA;
@@ -107,10 +107,10 @@ public class Web3Service {
     }
 
     public String deployContractDeveloper() {
-        Developer developer;
+        ContractDev developer;
         try {
             //Deploy contract to address specified by wallet
-            developer = Developer.deploy(this.web3j,
+            developer = ContractDev.deploy(this.web3j,
                     getCredentials(PRIVATE_KEY),
                     ManagedTransaction.GAS_PRICE,
                     Contract.GAS_LIMIT).send();
@@ -186,58 +186,6 @@ public class Web3Service {
         }
     }
 
-    public void testTutorial() {
-        log.info("Connecting to Ethereum ...");
-        Web3j web3 = Web3j.build(new HttpService("HTTP://127.0.0.1:7545"));
-        log.info("Successfuly connected to Ethereum");
-
-        try {
-            String privetKey = "298393836b1479b9c76362ed8f346848f70ec9d24fdb67f62f9bfc07cf9c599c"; // Add a private key here
-            // Decrypt private key into Credential object
-            Credentials credentials = Credentials.create(privetKey);
-            log.info("Account address: " + credentials.getAddress());
-            log.info("Balance: "
-                    + Convert.fromWei(web3.ethGetBalance(credentials.getAddress(), DefaultBlockParameterName.LATEST)
-                    .send().getBalance().toString(), Convert.Unit.ETHER));
-
-            // Get the latest nonce of current account
-            EthGetTransactionCount ethGetTransactionCount = web3
-                    .ethGetTransactionCount(credentials.getAddress(), DefaultBlockParameterName.LATEST).send();
-            BigInteger nonce = ethGetTransactionCount.getTransactionCount();
-
-            // Recipient address
-            String recipientAddress = credentials.getAddress();
-            // Value to transfer (in wei)
-            log.info("Enter Amount to be sent: 10");
-            BigInteger value = Convert.toWei("10", Convert.Unit.ETHER).toBigInteger();
-
-            // Gas Parameter
-            BigInteger gasLimit = BigInteger.valueOf(21000);
-            //eth_gasPrice, returns the current price per gas in wei.
-            EthGasPrice gasPrice = web3j.ethGasPrice().send();
-            //BigInteger gasPrice = Convert.toWei("1", Convert.Unit.GWEI).toBigInteger();
-
-            // Prepare the rawTransaction
-            RawTransaction rawTransaction = RawTransaction.createEtherTransaction(nonce, gasPrice.getGasPrice(), gasLimit,
-                    recipientAddress, value);
-
-            // Sign the transaction
-            byte[] signedMessage = TransactionEncoder.signMessage(rawTransaction, credentials);
-            String hexValue = Numeric.toHexString(signedMessage);
-
-            // Send transaction
-            EthSendTransaction ethSendTransaction = web3.ethSendRawTransaction(hexValue).send();
-            String transactionHash = ethSendTransaction.getTransactionHash();
-            log.info("transactionHash: " + transactionHash);
-
-            // Wait for transaction to be mined
-            mined(transactionHash, credentials);
-
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
-        }
-    }
-
     private void mined(String transactionHash, Credentials credentials) {
         try {
             // Wait for transaction to be mined
@@ -271,5 +219,40 @@ public class Web3Service {
             log.error("Problem encountered transferring funds: {}" + e.getMessage(), e);
         }
         throw new RuntimeException("Application exit failure");
+    }
+
+    public List<AccountDTO> populateAccountList(List<String> addresses) {
+        return addresses.stream().map(address -> AccountDTO.builder().address(address).build()).collect(Collectors.toList());
+    }
+
+    public List<AccountDTO> getAllEthBalances(List<AccountDTO> accountList) {
+        List<AccountDTO> list = new ArrayList<>();
+        accountList.forEach(account -> {
+            try {
+                EthGetBalance result = this.web3j.ethGetBalance(account.getAddress(), DefaultBlockParameter.valueOf("latest")).sendAsync().get();
+                BigDecimal bigDecimal = new BigDecimal(result.getBalance());
+
+                bigDecimal = bigDecimal.divide(new BigDecimal(1000000000));
+                bigDecimal = bigDecimal.divide(new BigDecimal(1000000000));
+                bigDecimal = bigDecimal.setScale(2, BigDecimal.ROUND_HALF_EVEN);
+
+                account.setBalance(bigDecimal);
+                list.add(account);
+                log.info("Ethereum Balance {}", result.getResult());
+            } catch (Exception ex) {
+                log.error(GENERIC_EXCEPTION, ex);
+            }
+        });
+        return list;
+    }
+
+    public void transferFunds(AccountDTO account) {
+        try {
+            Credentials credentials = getCredentials(account.getTransferFromPrivateKey());
+            Transfer.sendFunds(web3j, credentials, account.getTransferToAddress(),
+                    BigDecimal.valueOf(account.getTransferValue()), Convert.Unit.ETHER).send();
+        } catch (Exception ex) {
+            log.error(PLEASE_SUPPLY_REAL_DATA, ex);
+        }
     }
 }

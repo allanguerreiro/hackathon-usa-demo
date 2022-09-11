@@ -12,4 +12,7 @@ public class Constants {
     public static final String API_PERFORM_TRANSFER = "/api/perform/transfer";
     public static final String GENERIC_EXCEPTION = "Exception encountered!";
     public static final String PLEASE_SUPPLY_REAL_DATA = "Please Supply Real Data!";
+    public static final String API_ACCOUNT_LIST = "/api/list/accounts";
+    public static final String API_TRANSFER_FUNDS = "/api/transfer/funds";
+    public static final String SUCCESSFULLY_TRANSFERRED = "Exception encountered!";
 }
