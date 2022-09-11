@@ -17,12 +17,10 @@ import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
-import static br.com.hackathon.constant.Constants.API_SEND_TRANSACTION;
-import static br.com.hackathon.constant.Constants.GENERIC_EXCEPTION;
+import static br.com.hackathon.constant.Constants.*;
 
 @RestController
 public class EthereumRestController {
-
     @Autowired
     Web3Service web3Service;
 
@@ -126,6 +124,24 @@ public class EthereumRestController {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 var result = web3Service.sendEthereumTransaction();
+                responseTransfer.setMessage(result);
+            } catch (Exception e) {
+                responseTransfer.setMessage(GENERIC_EXCEPTION);
+            }
+            return responseTransfer;
+        }).thenApplyAsync(result -> {
+            result.setPerformance(TimeHelper.stop(start));
+            return result;
+        });
+    }
+
+    @RequestMapping(value = API_DEPLOY_CONTRACT, method = RequestMethod.GET)
+    public CompletableFuture<ResponseTransfer> deploy() {
+        ResponseTransfer responseTransfer = new ResponseTransfer();
+        Instant start = TimeHelper.start();
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var result = web3Service.deployContract();
                 responseTransfer.setMessage(result);
             } catch (Exception e) {
                 responseTransfer.setMessage(GENERIC_EXCEPTION);

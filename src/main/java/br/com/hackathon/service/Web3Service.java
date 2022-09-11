@@ -111,6 +111,22 @@ public class Web3Service {
         return contractAddress;
     }
 
+    public String deployContract() {
+        Developer developer;
+        try {
+            //Deploy contract to address specified by wallet
+            developer = Developer.deploy(this.web3j,
+                    getCredentials(PRIVATE_KEY),
+                    ManagedTransaction.GAS_PRICE,
+                    Contract.GAS_LIMIT).send();
+            log.info("Developer {}", developer);
+        } catch (Exception ex) {
+            log.error(PLEASE_SUPPLY_REAL_DATA, ex);
+            return PLEASE_SUPPLY_REAL_DATA;
+        }
+        return developer.getContractAddress();
+    }
+
     public String sendEthereumTransaction() {
         String transactionHash;
 
